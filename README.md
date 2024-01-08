@@ -5,6 +5,12 @@ Current development is for Rapsberry PI Pico.
 A mockup of the idea can be viewed in this short movie:
 <video src="assets/mockup.mp4" controls title="Mockup"></video>
 
+The video works locally, but not on github. I get this error message:
+"Access to fetch at 'https://raw.githubusercontent.com/FauthD/IRMP_STM32/master/assets/mockup.mp4' (redirected from 'https://github.com/FauthD/IRMP_STM32/raw/master/assets/mockup.mp4') from origin 'https://github.com' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status."
+
+In the meantime you find the video in "assets/mockup.mp4".
+
+
 All the rest below is the original text from Jörg.
 
 # IRMP on STM32 - a USB IR receiver/sender/powerswitch with wakeup-timer
