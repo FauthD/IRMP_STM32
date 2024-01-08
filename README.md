@@ -1,4 +1,13 @@
-﻿# IRMP on STM32 - a USB IR receiver/sender/powerswitch with wakeup-timer
+﻿# This is a Fork of Jörgs repo to add status leds.
+Hopefully he will accept my PR later on. I do not want a real fork on the long run.
+Current development is for Rapsberry PI Pico.
+
+A mockup of the idea can be viewed in this short movie:
+<video src="assets/mockup.mp4" controls title="Mockup"></video>
+
+All the rest below is the original text from Jörg.
+
+# IRMP on STM32 - a USB IR receiver/sender/powerswitch with wakeup-timer
 
 A remote control receiver with many functions based on cheap hardware.
 
