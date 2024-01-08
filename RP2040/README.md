@@ -27,3 +27,14 @@ See [Getting Started with the Raspberry Pi Pico](https://rptl.io/pico-get-starte
 -> Install the Toolchain  
 ->  Building "Blink"  
 ->  Load and run "Blink"  
+
+## Details
+- Clone the repo (e.g. gh repo clone FauthD/IRMP_STM32)
+- Either
+  - Install picoSDK, toolchain and create an environment variable PICO_SDK_PATH that points to the SDK (recommended).
+  - Clone the pico SDK into the local clone of my repo.
+- Navigate to RP2040 directory inside the local clone.
+- Delete or rename the directory build.
+- run bash make.sh (takes a while).
+- Find the result in IRMP_STM32/RP2040/build/*.uf2
+- Download to the pico with the known methods.
