@@ -22,6 +22,8 @@
 #include <hardware/structs/systick.h>
 #include "timestamp.h"
 #include "pico/bootrom.h"
+#include "write_neopixel.h"
+#include <sys/param.h>
 
 #define BYTES_PER_QUERY	(HID_IN_REPORT_COUNT - 4)
 
@@ -48,6 +50,15 @@ enum status {
 	STAT_CMD,
 	STAT_SUCCESS,
 	STAT_FAILURE
+};
+
+// FIXME: For now here, should go to usb_hid.h, but it looks like there are 
+// several versions of this file and the wrong one gets included.
+#define REPORT_ID_LED_OUT	0x04
+
+enum display_status {
+	LED_INIT,
+	LED_CMD,
 };
 
 const char supported_protocols[] = {
@@ -515,7 +526,7 @@ void reboot(void)
 	reset_usb_boot(PICO_DEFAULT_LED_PIN, 0);
 }
 
-/* is received ir-code in the last wakeup-slot? reboot µC if true */
+/* is received ir-code in the last wakeup-slot? reboot ï¿½C if true */
 void check_reboot(IRMP_DATA *ir)
 {
 	uint16_t idx;
@@ -592,6 +603,8 @@ int main(void)
 	eeprom_begin(2*FLASH_PAGE_SIZE, 2); // 16 pages of 512 byte
 	irmp_set_callback_ptr(led_callback);
 
+	InitNeopixel(8, false);
+
 	while (1)
 	{
 		tud_task(); // tinyusb device task
@@ -609,36 +622,48 @@ int main(void)
 		}
 
 		/* test if configuration command is received */
-		if(PrevXferComplete && USB_HID_Data_Received && *bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == STAT_CMD) {
+		if(PrevXferComplete && USB_HID_Data_Received) {
 			USB_HID_Data_Received = 0;
+ 			if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == STAT_CMD) {
+				switch (*(bufptr+2)) {
+				case ACC_GET:
+					ret = get_handler(bufptr);
+					break;
+				case ACC_SET:
+					ret = set_handler(bufptr);
+					break;
+				case ACC_RESET:
+					ret = reset_handler(bufptr);
+					break;
+				default:
+					ret = -1;
+				}
 
-			switch (*(bufptr+2)) {
-			case ACC_GET:
-				ret = get_handler(bufptr);
-				break;
-			case ACC_SET:
-				ret = set_handler(bufptr);
-				break;
-			case ACC_RESET:
-				ret = reset_handler(bufptr);
-				break;
-			default:
-				ret = -1;
+				if (ret == -1) {
+					*(bufptr+1) = STAT_FAILURE;
+					ret = 4;
+				} else {
+					*(bufptr+1) = STAT_SUCCESS;
+				}
+
+				/* send configuration data */
+				USB_HID_SendData(REPORT_ID_CONFIG_IN, bufptr, ret);
+				blink_LED();
+				if(Reboot)
+					reboot();
 			}
-
-			if (ret == -1) {
-				*(bufptr+1) = STAT_FAILURE;
-				ret = 4;
-			} else {
-				*(bufptr+1) = STAT_SUCCESS;
+ 			else if (*bufptr == REPORT_ID_LED_OUT && *(bufptr+1) == LED_CMD) {
+				// Get num leds (2) and led data from hid report
+				// Allingment of bufptr is a minimum of 4 (CFG_TUSB_MEM_ALIGN), so it is
+				// save to cast to a unsigned long*
+				WriteNeopixel(MIN(bufptr[2], 63), (unsigned long*) bufptr+4);
 			}
-
-			/* send configuration data */
-			USB_HID_SendData(REPORT_ID_CONFIG_IN, bufptr, ret);
-			blink_LED();
-			if(Reboot)
-				reboot();
-		}
+		 	else if (*bufptr == REPORT_ID_LED_OUT && *(bufptr+1) == LED_INIT) {
+				// Initialize the Neopixel code (optional, can be used to turn on rgbw type pixels)
+				// Get num leds (2) and is_rgbw from hid report (default is 8 rgb leds)
+				InitNeopixel(MIN(bufptr[2], 63), bufptr[3]);
+			}
+}
 
 		/* poll IR-data */
 		if (PrevXferComplete && irmp_get_data(&myIRData)) {

@@ -25,6 +25,7 @@
 #define REPORT_ID_IR		0x01
 #define REPORT_ID_CONFIG_IN	0x02
 #define REPORT_ID_CONFIG_OUT	0x03
+#define REPORT_ID_LED_OUT	0x04
 
 //extern uint8_t buf[BUFFER_SIZE];
 extern uint8_t *bufptr;

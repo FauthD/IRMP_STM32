@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
 
-include(../pico-sdk/pico_sdk_init.cmake)
+if (DEFINED ENV{PICO_SDK_PATH})
+    set(PICO_SDK_PATH $ENV{PICO_SDK_PATH})
+    message("Using PICO_SDK_PATH from environment ('${PICO_SDK_PATH}')")
+else()
+    set(PICO_SDK_PATH ../pico-sdk)
+endif ()
+
+include("${PICO_SDK_PATH}/pico_sdk_init.cmake")
+
 
 string(TIMESTAMP BUILD_TIME "%Y-%m-%d_%H-%M")
 # sets PROJECT_NAME and PROJECT_SOURCE_DIR
@@ -16,6 +24,7 @@ add_executable(${PROJECT_NAME}
     src/irmpmain.c
     eeprom/eeprom.c
     src/usb_hid.c
+    src/write_neopixel.c
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -28,7 +37,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 # In addition to pico_stdlib required for common PicoSDK functionality, add dependency on tinyusb_device
 # for TinyUSB device support and tinyusb_board for the additional board support library used by the example
-target_link_libraries(${PROJECT_NAME} pico_stdlib tinyusb_device tinyusb_board hardware_pwm hardware_flash hardware_exception timestamp)
+target_link_libraries(${PROJECT_NAME} pico_stdlib tinyusb_device tinyusb_board hardware_pwm hardware_flash hardware_exception timestamp hardware_pio)
 
 # Uncomment this line to enable fix for Errata RP2040-E5 (the fix requires use of GPIO 15)
 # for compability with early revisions
