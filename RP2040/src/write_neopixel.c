@@ -19,17 +19,11 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "ws2812.pio.h"
+#include "config.h"
 #include "write_neopixel.h"
 #include "hw_trace.h"
 
 #define IS_RGBW false
-
-#ifdef PICO_DEFAULT_WS2812_PIN
-#define WS2812_PIN PICO_DEFAULT_WS2812_PIN
-#else
-// default to pin 2 if the board doesn't have a default WS2812 pin defined
-#define WS2812_PIN 2
-#endif
 
 /*
 Hint:
@@ -37,6 +31,7 @@ The PIO Fifo is 8 entries long. This is sufficient to load 8 leds without much d
 For longer led chains, you must expext an extra 30uSec per led. Or even 40 uSec for RGBW leds.
 */
 
+// FIXME: Either need to close IRQs or use DMA here
 void WriteNeopixel(int len, unsigned long *buf)
 {
 	HW_Trace2_H();
@@ -47,6 +42,7 @@ void WriteNeopixel(int len, unsigned long *buf)
 	HW_Trace1_L();
 }
 
+// FIXME: Either need to close IRQs or use DMA here
 // Turn off all pixels
 void ResetNeopixel(int len)
 {

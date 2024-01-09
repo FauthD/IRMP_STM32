@@ -17,6 +17,7 @@
 #include "irmpmain.h"
 #include "eeprom.h"
 #include "usb_hid.h"
+#include "config.h"	// for clarity, gets already included in usb_hid.h
 #include <hardware/flash.h>
 #include <hardware/exception.h>
 #include <hardware/structs/systick.h>
@@ -51,10 +52,6 @@ enum status {
 	STAT_SUCCESS,
 	STAT_FAILURE
 };
-
-// FIXME: For now here, should go to usb_hid.h, but it looks like there are 
-// several versions of this file and the wrong one gets included.
-#define REPORT_ID_LED_OUT	0x04
 
 enum display_status {
 	LED_INIT,

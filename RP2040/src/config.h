@@ -30,4 +30,11 @@
 #define WAKEUP_RESET_GPIO	7  /* GPIO 7  (Pin 10) */
 #define LED_GPIO		8  /* GPIO 8  (Pin 11) */
 
+#ifdef PICO_DEFAULT_WS2812_PIN
+#define WS2812_PIN PICO_DEFAULT_WS2812_PIN
+#else
+// default to pin 2 if the board doesn't have a default WS2812 pin defined
+#define WS2812_PIN 2
+#endif
+
 #endif /* __CONFIG_H */
