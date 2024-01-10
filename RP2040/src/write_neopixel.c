@@ -1,7 +1,7 @@
 /*
  *  A solution to display stus with neopixel leds
  *
- *  Copyright (C) 2024 Dieter Fauth, Joerg Riechardt
+ *  Copyright (C) 2024 Dieter Fauth
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/sync.h"
 #include "ws2812.pio.h"
 #include "config.h"
 #include "write_neopixel.h"
@@ -32,13 +33,18 @@ For longer led chains, you must expext an extra 30uSec per led. Or even 40 uSec 
 */
 
 // FIXME: Either need to close IRQs or use DMA here
+// Reason: If an IRQ takes longer that the amount of bits send out,
+// we get wrong LED setup.
+// For now I limit to 8 pixels
 void WriteNeopixel(int len, unsigned long *buf)
 {
-	HW_Trace2_H();
+	HW_Trace1_H();
+	uint32_t status = save_and_disable_interrupts();
 	for (int n=0; n<len; n++)
 	{
 		pio_sm_put_blocking(pio0, 0, buf[n]);
 	}
+	restore_interrupts(status);
 	HW_Trace1_L();
 }
 
@@ -47,11 +53,13 @@ void WriteNeopixel(int len, unsigned long *buf)
 void ResetNeopixel(int len)
 {
 	HW_Trace2_H();
+	uint32_t status = save_and_disable_interrupts();
 	for (int n=0; n<len; n++)
 	{
 		pio_sm_put_blocking(pio0, 0, 0);
 	}
-	HW_Trace1_L();
+	restore_interrupts(status);
+	HW_Trace2_L();
 }
 
 static void DemoSweep(uint8_t r, uint8_t g, uint8_t b);

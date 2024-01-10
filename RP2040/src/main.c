@@ -653,12 +653,42 @@ int main(void)
 				// Get num leds (2) and led data from hid report
 				// Allingment of bufptr is a minimum of 4 (CFG_TUSB_MEM_ALIGN), so it is
 				// save to cast to a unsigned long*
-				WriteNeopixel(MIN(bufptr[2], 63), (unsigned long*) bufptr+4);
+				// Report:
+				//	0:	Report ID
+				//	1:	CMD
+				//	2:	pixel count (4 bytes each)
+				//	3:	unused
+				//	4..63:	payload
+
+				// For some reason we need to copy the payload to this Pixels buffer.
+				// If we pass the pBuf to the WriteNeopixel, then only 5 or 6 leds are on, the rest is dark.
+				// Looks like we really write 000000 to these last leds.
+				// Even if we do this extra copy action inside the WriteNeopixel it fails.
+				// I check for timing issues, but ruled it out with a few tests.
+				// (Extra delay would change the number of working leds, or break the extra buffer stuff)
+				// I assumed an IRQ could overwrite the buffer (bufptr).
+				// Very obscure.
+				// FIXME: Analyze with the debugger.
+				unsigned long* pBuf = (unsigned long*) &bufptr[4];
+				int len=MIN(bufptr[2], MAX_NEOPIXEL);
+				uint32_t Pixels[MAX_NEOPIXEL+1];
+				for (int n=0; n<len; n++)
+				{
+					Pixels[n] = pBuf[n];
+				}
+				// WriteNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), (unsigned long*) bufptr+4);
+				WriteNeopixel(len, Pixels);
 			}
 		 	else if (*bufptr == REPORT_ID_LED_OUT && *(bufptr+1) == LED_INIT) {
 				// Initialize the Neopixel code (optional, can be used to turn on rgbw type pixels)
 				// Get num leds (2) and is_rgbw from hid report (default is 8 rgb leds)
-				InitNeopixel(MIN(bufptr[2], 63), bufptr[3]);
+				// Report:
+				//	0:	Report ID
+				//	1:	CMD
+				//	2:	pixel count for initialization (4 bytes each)
+				//	3:	RGB -> 0, RGBW -> 1
+				//	4..63:	unused
+				InitNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), bufptr[3]);
 			}
 }
 
