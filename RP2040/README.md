@@ -44,20 +44,20 @@ This is an extension to the original IRMP design and for the RP2040 only so far.
 
 ### Testing with existing tools
 
-There is a nice tool to test hidraw devices called hidapitester. Unfortunatelly it is not in the repos of Ubuntu (Suse,Redhat, ... not tested).
+There is a nice tool to test hidraw devices called *hidapitester*. Unfortunatelly it is not in the repos of Ubuntu (did not try other distributions).
 
 [Prebuilt binaries can be found there](https://github.com/todbot/hidapitester/releases)
 
 See how to build it in their README.me on [Github](https://github.com/todbot/hidapitester), it is a fairly simple process.
 
-After building it is recommended to place it in the /usr/local/bin directory for easier use.
+After building it is recommended to place it in the */usr/local/bin* directory for easier use.
 
-`sudo cp hidapitester /usr/local/bin/`
+    sudo cp hidapitester /usr/local/bin/
 
 ### Turn all 8 leds to blue
-`hidapitester --vidpid 1209:4444 --open --send-output 3,11,8,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0 `
+    hidapitester --vidpid 1209:4444 --open --send-output 3,11,8,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0,0,200,0,0  
 
-The bove is one single line.
+The above is one single line.
 
 The payload consists of:
 | Index | Description |
@@ -76,10 +76,17 @@ The payload consists of:
 | R | red (0..255) |
 | G | green (0..255) |
 
-So the "0,200,0,0" sequences in the above example are for one blue pixel.
+So the *0,200,0,0* sequences in the above example are for one blue pixel.
 
 ### One more example
-`hidapitester --vidpid 1209:4444 --open --send-output 3,11,8,0,0,0,100,0,0,0,0,100,0,100,0,0,0,100,100,0,0,100,100,100,0,10,10,10,0,0,30,30,0,0,20,0 `
+    hidapitester --vidpid 1209:4444 --open --send-output 3,11,8,0,0,0,100,0,0,0,0,100,0,100,0,0,0,100,100,0,0,100,100,100,0,10,10,10,0,0,30,30,0,0,20,0
 
-It produces thesde colores: red,green,blue,magenta,white,dark wite, dark green-yellow, dark red
+The tool response:  
+    Opening device, vid/pid: 0x1209/0x4444  
+    Writing output report of 64-bytes...wrote 64 bytes:  
+    03 0B 08 00 00 00 64 00 00 00 00 64 00 64 00 00 00 64 64 00 00 64 64 64 00 0A 0A 0A 00 00 1E 1E  
+    00 00 14 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  
+    Closing device
+
+It produces these colors: red,green,blue,magenta,white,dark wite, dark green-yellow, dark red
 
