@@ -44,18 +44,15 @@ enum command {
 	CMD_REBOOT,
 	CMD_EEPROM_RESET,
 	CMD_EEPROM_COMMIT,
-	CMD_EEPROM_GET_RAW
+	CMD_EEPROM_GET_RAW,
+	CMD_NEOPIXEL_INIT,
+	CMD_NEOPIXEL,
 };
 
 enum status {
 	STAT_CMD,
 	STAT_SUCCESS,
 	STAT_FAILURE
-};
-
-enum display_status {
-	LED_INIT,
-	LED_CMD,
 };
 
 const char supported_protocols[] = {
@@ -649,7 +646,7 @@ int main(void)
 				if(Reboot)
 					reboot();
 			}
- 			else if (*bufptr == REPORT_ID_LED_OUT && *(bufptr+1) == LED_CMD) {
+ 			else if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == CMD_NEOPIXEL) {
 				// Get num leds (2) and led data from hid report
 				// Allingment of bufptr is a minimum of 4 (CFG_TUSB_MEM_ALIGN), so it is
 				// save to cast to a unsigned long*
@@ -679,7 +676,7 @@ int main(void)
 				// WriteNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), (unsigned long*) bufptr+4);
 				WriteNeopixel(len, Pixels);
 			}
-		 	else if (*bufptr == REPORT_ID_LED_OUT && *(bufptr+1) == LED_INIT) {
+		 	else if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == CMD_NEOPIXEL_INIT) {
 				// Initialize the Neopixel code (optional, can be used to turn on rgbw type pixels)
 				// Get num leds (2) and is_rgbw from hid report (default is 8 rgb leds)
 				// Report:
