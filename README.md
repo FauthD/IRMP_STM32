@@ -1,6 +1,6 @@
 ﻿# This is a Fork of Jörgs repo to add status leds.
 Hopefully he will accept my PR later on. I do not want a real fork on the long run.
-Current development is for Rapsberry PI Pico.
+Current development is for Rapsberry PI Pico RP2040.
 
 A mockup of the idea can be viewed in this short movie:
 <video src="assets/mockup.mp4" controls title="Mockup"></video>
@@ -21,6 +21,8 @@ In the meantime you find the video in "assets/mockup.mp4".
 | :----: | :----: |
 |<img src="assets/ClosedHousing.jpg"> |<img src="assets/SideView.jpg"> |
 
+There is a python example that implements the light effect seen in the mockup.
+[RunLight](NeoPixelCtl/Python/README.md)
 
 All the rest below is the original text from Jörg.
 

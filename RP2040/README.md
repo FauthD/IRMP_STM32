@@ -90,3 +90,9 @@ The tool response:
 
 It produces these colors: red,green,blue,magenta,white,dark wite, dark green-yellow, dark red
 
+### Python example
+In NeoPixelCtl/Python there is an example code that implements a run light as seen in my mockup movie (RunLight.py). Before you execute it, it is important to install the udev rule udev/70-irmp.rules to to /etc/udev/rules.d. It changes access rights so there is no need for sudo.
+
+[More details](../NeoPixelCtl/Python/README.md)
+
+[udev](../udev/README.md)
