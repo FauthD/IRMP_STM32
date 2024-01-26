@@ -22,8 +22,10 @@ PID=0x4444
 NUM_PIXEL=8
 REPORT_ID_CONFIG_OUT = b'\3'
 REPORT_SIZE = 64
+STAT_CMD = 0
+ACC_SET = 1
 CMD_NEOPIXEL = 0xb
-PAYLOAD_OFFSET = 4
+PAYLOAD_OFFSET = 8
 
 ###############################################
 @dataclass
@@ -47,9 +49,12 @@ def InitPixels():
 			setPixelColor(n, 0,0,0)
 
 def SendReport(h):
+	# Note: Report ID will be added in HidAPI, so all offsets are one less
 	report = bytearray(REPORT_SIZE-1)
-	report[0] = CMD_NEOPIXEL
-	report[1] = NUM_PIXEL
+	report[0] = STAT_CMD
+	report[1] = ACC_SET
+	report[2] = CMD_NEOPIXEL
+	report[3] = NUM_PIXEL
 	for i in range(8):
 		offset = PAYLOAD_OFFSET-1+i*4
 		report[offset + 0] = Pixels[i].w

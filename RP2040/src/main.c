@@ -2,7 +2,7 @@
  *  IR receiver, sender, USB wakeup, motherboard switch wakeup, wakeup timer,
  *  USB HID device, eeprom emulation
  *
- *  Copyright (C) 2014-2023 Joerg Riechardt
+ *  Copyright (C) 2014-2024 Joerg Riechardt
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -243,10 +243,13 @@ void LED_Switch_init(void)
 	/* start with wakeup switch off */
 	gpio_init(WAKEUP_GPIO);
 	gpio_init(EXTLED_GPIO);
+	gpio_init(STATUSLED_GPIO);
 	gpio_set_drive_strength(EXTLED_GPIO, GPIO_DRIVE_STRENGTH_12MA);
+	gpio_set_drive_strength(STATUSLED_GPIO, GPIO_DRIVE_STRENGTH_12MA);
 	//gpio_set_drive_strength(WAKEUP_GPIO, GPIO_DRIVE_STRENGTH_12MA); // TODO: once enough?!
 	gpio_set_dir(WAKEUP_GPIO, GPIO_IN); // no open drain on RP2040
 	gpio_set_dir(EXTLED_GPIO, GPIO_OUT);
+	gpio_set_dir(STATUSLED_GPIO, GPIO_OUT);
 }
 
 void toggle_led(void)
@@ -268,6 +271,7 @@ void fast_toggle(void)
 	int i;
 	for(i=0; i<10; i++) {
 		toggle_led();
+		gpio_put(STATUSLED_GPIO, 1 - gpio_get(STATUSLED_GPIO));
 		sleep_ms(50); 
 	}
 }
@@ -277,6 +281,10 @@ void yellow_short_on(void)
 	toggle_led();
 	sleep_ms(130);
 	toggle_led();
+}
+
+void statusled_write(uint8_t led_state) {
+	gpio_put(STATUSLED_GPIO, led_state);
 }
 
 void eeprom_store(int addr, uint8_t *buf)
@@ -461,6 +469,56 @@ int8_t set_handler(uint8_t *buf)
 		if(!eeprom_commit())
 			ret = -1;
 		break;
+	case CMD_STATUSLED:
+		statusled_write(buf[4]);
+		break;
+	case CMD_NEOPIXEL:
+		// Get num leds (2) and led data from hid report
+		// Allingment of bufptr is a minimum of 4 (CFG_TUSB_MEM_ALIGN), so it is
+		// save to cast to a unsigned long*
+		// Report:
+		//	0:	Report ID
+		//	1:	STAT_CMD
+		//	2:	ACC_SET
+		//	3:	CMD
+		//	4:	pixel count (4 bytes each)
+		//	5..7:	unused
+		//	8..63:	payload
+
+		// For some reason we need to copy the payload to this Pixels buffer.
+		// If we pass the pBuf to the WriteNeopixel, then only 5 or 6 leds are on, the rest is dark.
+		// Looks like we really write 000000 to these last leds.
+		// Even if we do this extra copy action inside the WriteNeopixel it fails.
+		// I check for timing issues, but ruled it out with a few tests.
+		// (Extra delay would change the number of working leds, or break the extra buffer stuff)
+		// I assumed an IRQ could overwrite the buffer (bufptr).
+		// Very obscure.
+		// FIXME: Analyze with the debugger.
+		{
+			unsigned long* pBuf = (unsigned long*) &bufptr[8];
+			int len=MIN(bufptr[4], MAX_NEOPIXEL);
+			uint32_t Pixels[MAX_NEOPIXEL+1];
+			for (int n=0; n<len; n++)
+			{
+				Pixels[n] = pBuf[n];
+			}
+			// WriteNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), (unsigned long*) bufptr+4);
+			WriteNeopixel(len, Pixels);
+		}
+		break;
+	case CMD_NEOPIXEL_INIT:
+		// Initialize the Neopixel code (optional, can be used to turn on rgbw type pixels)
+		// Get num leds (2) and is_rgbw from hid report (default is 8 rgb leds)
+		// Report:
+		//	0:	Report ID
+		//	1:	STAT_CMD
+		//	2:	ACC_SET
+		//	3:	CMD
+		//	4:	pixel count for initialization (4 bytes each)
+		//	5:	RGB -> 0, RGBW -> 1
+		//	6..63:	unused
+		InitNeopixel(MIN(bufptr[4], MAX_NEOPIXEL), bufptr[5]);
+		break;
 	default:
 		ret = -1;
 	}
@@ -617,78 +675,36 @@ int main(void)
 		}
 
 		/* test if configuration command is received */
-		if(PrevXferComplete && USB_HID_Data_Received) {
+		if(PrevXferComplete && USB_HID_Data_Received && *bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == STAT_CMD) {
 			USB_HID_Data_Received = 0;
- 			if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == STAT_CMD) {
-				switch (*(bufptr+2)) {
-				case ACC_GET:
-					ret = get_handler(bufptr);
-					break;
-				case ACC_SET:
-					ret = set_handler(bufptr);
-					break;
-				case ACC_RESET:
-					ret = reset_handler(bufptr);
-					break;
-				default:
-					ret = -1;
-				}
 
-				if (ret == -1) {
-					*(bufptr+1) = STAT_FAILURE;
-					ret = 4;
-				} else {
-					*(bufptr+1) = STAT_SUCCESS;
-				}
+			switch (*(bufptr+2)) {
+			case ACC_GET:
+				ret = get_handler(bufptr);
+				break;
+			case ACC_SET:
+				ret = set_handler(bufptr);
+				break;
+			case ACC_RESET:
+				ret = reset_handler(bufptr);
+				break;
+			default:
+				ret = -1;
+			}
 
-				/* send configuration data */
-				USB_HID_SendData(REPORT_ID_CONFIG_IN, bufptr, ret);
-				blink_LED();
-				if(Reboot)
-					reboot();
+			if (ret == -1) {
+				*(bufptr+1) = STAT_FAILURE;
+				ret = 4;
+			} else {
+				*(bufptr+1) = STAT_SUCCESS;
 			}
- 			else if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == CMD_NEOPIXEL) {
-				// Get num leds (2) and led data from hid report
-				// Allingment of bufptr is a minimum of 4 (CFG_TUSB_MEM_ALIGN), so it is
-				// save to cast to a unsigned long*
-				// Report:
-				//	0:	Report ID
-				//	1:	CMD
-				//	2:	pixel count (4 bytes each)
-				//	3:	unused
-				//	4..63:	payload
 
-				// For some reason we need to copy the payload to this Pixels buffer.
-				// If we pass the pBuf to the WriteNeopixel, then only 5 or 6 leds are on, the rest is dark.
-				// Looks like we really write 000000 to these last leds.
-				// Even if we do this extra copy action inside the WriteNeopixel it fails.
-				// I check for timing issues, but ruled it out with a few tests.
-				// (Extra delay would change the number of working leds, or break the extra buffer stuff)
-				// I assumed an IRQ could overwrite the buffer (bufptr).
-				// Very obscure.
-				// FIXME: Analyze with the debugger.
-				unsigned long* pBuf = (unsigned long*) &bufptr[4];
-				int len=MIN(bufptr[2], MAX_NEOPIXEL);
-				uint32_t Pixels[MAX_NEOPIXEL+1];
-				for (int n=0; n<len; n++)
-				{
-					Pixels[n] = pBuf[n];
-				}
-				// WriteNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), (unsigned long*) bufptr+4);
-				WriteNeopixel(len, Pixels);
-			}
-		 	else if (*bufptr == REPORT_ID_CONFIG_OUT && *(bufptr+1) == CMD_NEOPIXEL_INIT) {
-				// Initialize the Neopixel code (optional, can be used to turn on rgbw type pixels)
-				// Get num leds (2) and is_rgbw from hid report (default is 8 rgb leds)
-				// Report:
-				//	0:	Report ID
-				//	1:	CMD
-				//	2:	pixel count for initialization (4 bytes each)
-				//	3:	RGB -> 0, RGBW -> 1
-				//	4..63:	unused
-				InitNeopixel(MIN(bufptr[2], MAX_NEOPIXEL), bufptr[3]);
-			}
-}
+			/* send configuration data */
+			USB_HID_SendData(REPORT_ID_CONFIG_IN, bufptr, ret);
+			blink_LED();
+			if(Reboot)
+				reboot();
+		}
 
 		/* poll IR-data */
 		if (PrevXferComplete && irmp_get_data(&myIRData)) {
