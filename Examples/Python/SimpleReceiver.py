@@ -15,15 +15,32 @@ import hid
 from array import *
 import Irmp as irmp
 
+# Raw Data (dec):
+# [1, 21, 		15, 0,	34, 4, 		1,		0, 0, .....]
+# ID, Protocol, Addr,	Command,	Flag,	Unused
+###############################################
+def Decode(received):
+	if (received[0] == irmp.REPORT_ID_IR):
+		Protcol = received[1]
+		Addr = received[2]+(received[3]<<8)
+		Command = received[4]+(received[5]<<8)
+		Flag = received[6]
+		print(hex(Protcol), hex(Addr), hex(Command), hex(Flag))
+	else:
+		print (received)
+
+
 ###############################################
 def Read(h):
-	print("Read the data")
+	print("Read the data in endless loop")
+	
+	# enable non-blocking mode
+	h.set_nonblocking(1)
+	
 	while True:
-		d = h.read(64)
+		d = h.read(irmp.REPORT_SIZE)
 		if d:
-			print(d)
-		else:
-			break
+			Decode(d)
 
 ###############################################
 def Run():
@@ -36,6 +53,11 @@ def Run():
 	except IOError as ex:
 		print(ex)
 		print("You probably don't have the IRMP device.")
+		h.close()
+
+	except KeyboardInterrupt:
+		print("Keyboard interrupt")
+		h.close()
 
 	print("Done")
 
