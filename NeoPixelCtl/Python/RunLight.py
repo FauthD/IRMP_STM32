@@ -25,7 +25,7 @@ REPORT_ID_CONFIG_OUT = 3
 REPORT_SIZE = 64
 STAT_CMD = 0
 ACC_SET = 1
-CMD_NEOPIXEL = 0xb
+CMD_NEOPIXEL = 0x41
 PAYLOAD_OFFSET = 8
 
 ###############################################
