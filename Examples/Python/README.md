@@ -20,7 +20,14 @@ Shows a moving light from left to right and vice versa. Quite similar to my very
 
 ## [SimpleReceiver.py](SimpleReceiver.py)
 A very simple receiver, just enough to show the basics.
-After strting it, send some IR-Remote commands from the Remote and you can see the data printed.
+After starting it, send some IR-Remote commands from the Remote and you can see the data printed.
+Read the data in endless loop
+```
+0x15 0xf 0x423 0x0 rc_core:  0x800f0423
+0x15 0xf 0x423 0x1 rc_core:  0x800f0423
+```
+## [ReceiveAndSend.py](ReceiveAndSend.py)
+Still a simple receiver, but at certein keys it send sweeps to the Neopixels.
 
 # USB Sniffer tool
 This free RP2040 based [USB sniffer](https://github.com/ataradov/usb-sniffer-lite) helped me with debugging. Thanks to Alex Taradov for providing this wonderfull tool.
