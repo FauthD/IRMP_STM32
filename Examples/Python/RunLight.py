@@ -15,18 +15,7 @@ import hid
 from dataclasses import dataclass
 from array import *
 import time
-
-###############################################
-VID=0x1209
-PID=0x4444
-
-NUM_PIXEL=8
-REPORT_ID_CONFIG_OUT = 3
-REPORT_SIZE = 64
-STAT_CMD = 0
-ACC_SET = 1
-CMD_NEOPIXEL = 0x41
-PAYLOAD_OFFSET = 8
+import Irmp as irmp
 
 ###############################################
 @dataclass
@@ -36,7 +25,7 @@ class Pixel:
 	g: int = 0
 	b: int = 0
 
-Pixels = [Pixel() for i in range(NUM_PIXEL+1)]
+Pixels = [Pixel() for i in range(irmp.NUM_PIXEL+1)]
 
 ###############################################
 def setPixelColor(index: int, r: int, g: int, b: int):
@@ -46,18 +35,18 @@ def setDarkPixelColor(index: int, r: int, g: int, b: int):
 	setPixelColor(index, int(r/8),int(g/8),int(b/8))
 
 def InitPixels():
-		for n in range(NUM_PIXEL):
+		for n in range(irmp.NUM_PIXEL):
 			setPixelColor(n, 0,0,0)
 
 def SendReport(h):
-	report = bytearray(REPORT_SIZE)
-	report[0] = REPORT_ID_CONFIG_OUT
-	report[1] = STAT_CMD
-	report[2] = ACC_SET
-	report[3] = CMD_NEOPIXEL
-	report[4] = NUM_PIXEL
-	for i in range(NUM_PIXEL):
-		offset = PAYLOAD_OFFSET+i*4
+	report = bytearray(irmp.REPORT_SIZE)
+	report[0] = irmp.REPORT_ID_CONFIG_OUT
+	report[1] = irmp.STAT_CMD
+	report[2] = irmp.ACC_SET
+	report[3] = irmp.CMD_NEOPIXEL
+	report[4] = irmp.NUM_PIXEL
+	for i in range(irmp.NUM_PIXEL):
+		offset = irmp.NEOPIXEL_PAYLOAD_OFFSET+i*4
 		report[offset + 0] = Pixels[i].w
 		report[offset + 1] = Pixels[i].b
 		report[offset + 2] = Pixels[i].r
@@ -68,7 +57,7 @@ def SendReport(h):
 def DemoSweep(h, r, g, b):
 	delay=0.050
 
-	for n in range(NUM_PIXEL):
+	for n in range(irmp.NUM_PIXEL):
 		setPixelColor(n, r,g,b)
 		setDarkPixelColor(n+1, r,g,b)
 		setDarkPixelColor(n-1, r,g,b)
@@ -77,7 +66,7 @@ def DemoSweep(h, r, g, b):
 		setPixelColor(n, 0,0,0)
 		setPixelColor(n-1, 0,0,0)
 
-	for n in reversed(range(NUM_PIXEL)):
+	for n in reversed(range(irmp.NUM_PIXEL)):
 		setPixelColor(n, r,g,b)
 		setDarkPixelColor(n-1, r,g,b)
 		setDarkPixelColor(n+1, r,g,b)
@@ -89,12 +78,19 @@ def DemoSweep(h, r, g, b):
 	setPixelColor(0, 0,0,0)
 	SendReport(h)
 
-###############################################
+###########
 def Run():
-	h = hid.device()
-	h.open(VID, PID)
-	for n in range(10):
-		DemoSweep(h, 150,5,5)
+	print("You should see 10 sweeps on the Neopixels.")
+
+	try:
+		h = hid.device()
+		h.open(irmp.VID, irmp.PID)
+		for n in range(10):
+			DemoSweep(h, 150,5,5)
+
+	except IOError as ex:
+		print(ex)
+		print("You probably don't have the IRMP device.")
 
 	h.close()
 	print("Done")
