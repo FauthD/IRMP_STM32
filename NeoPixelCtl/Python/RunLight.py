@@ -9,8 +9,9 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+# pip uninstall hid
 # pip install hidapi
-import hidapi as hid
+import hid
 from dataclasses import dataclass
 from array import *
 import time
@@ -20,7 +21,7 @@ VID=0x1209
 PID=0x4444
 
 NUM_PIXEL=8
-REPORT_ID_CONFIG_OUT = b'\3'
+REPORT_ID_CONFIG_OUT = 3
 REPORT_SIZE = 64
 STAT_CMD = 0
 ACC_SET = 1
@@ -45,29 +46,29 @@ def setDarkPixelColor(index: int, r: int, g: int, b: int):
 	setPixelColor(index, int(r/8),int(g/8),int(b/8))
 
 def InitPixels():
-		for n in range(8):
+		for n in range(NUM_PIXEL):
 			setPixelColor(n, 0,0,0)
 
 def SendReport(h):
-	# Note: Report ID will be added in HidAPI, so all offsets are one less
-	report = bytearray(REPORT_SIZE-1)
-	report[0] = STAT_CMD
-	report[1] = ACC_SET
-	report[2] = CMD_NEOPIXEL
-	report[3] = NUM_PIXEL
-	for i in range(8):
-		offset = PAYLOAD_OFFSET-1+i*4
+	report = bytearray(REPORT_SIZE)
+	report[0] = REPORT_ID_CONFIG_OUT
+	report[1] = STAT_CMD
+	report[2] = ACC_SET
+	report[3] = CMD_NEOPIXEL
+	report[4] = NUM_PIXEL
+	for i in range(NUM_PIXEL):
+		offset = PAYLOAD_OFFSET+i*4
 		report[offset + 0] = Pixels[i].w
 		report[offset + 1] = Pixels[i].b
 		report[offset + 2] = Pixels[i].r
 		report[offset + 3] = Pixels[i].g
 
-	h.write(report, REPORT_ID_CONFIG_OUT)
+	h.write(report)
 
 def DemoSweep(h, r, g, b):
 	delay=0.050
 
-	for n in range(8):
+	for n in range(NUM_PIXEL):
 		setPixelColor(n, r,g,b)
 		setDarkPixelColor(n+1, r,g,b)
 		setDarkPixelColor(n-1, r,g,b)
@@ -76,7 +77,7 @@ def DemoSweep(h, r, g, b):
 		setPixelColor(n, 0,0,0)
 		setPixelColor(n-1, 0,0,0)
 
-	for n in reversed(range(8)):
+	for n in reversed(range(NUM_PIXEL)):
 		setPixelColor(n, r,g,b)
 		setDarkPixelColor(n-1, r,g,b)
 		setDarkPixelColor(n+1, r,g,b)
@@ -90,7 +91,8 @@ def DemoSweep(h, r, g, b):
 
 ###############################################
 def Run():
-	h = hid.Device(vendor_id=VID, product_id=PID)
+	h = hid.device()
+	h.open(VID, PID)
 	for n in range(10):
 		DemoSweep(h, 150,5,5)
 
