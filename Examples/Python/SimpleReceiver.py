@@ -14,6 +14,7 @@
 import hid
 from array import *
 import Irmp as irmp
+import time
 
 # Raw Data (dec):
 # [1, 21, 		15, 0,	34, 4, 		1,		0, 0, .....]
@@ -41,6 +42,8 @@ def Read(h):
 		d = h.read(irmp.REPORT_SIZE)
 		if d:
 			Decode(d)
+		else:
+			time.sleep(0.01)
 
 ###############################################
 def Run():

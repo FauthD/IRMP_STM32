@@ -66,6 +66,8 @@ class irmpd:
 			d = self.hdev.read(irmp.REPORT_SIZE)
 			if d:
 				self.Decode(d)
+			else:
+				time.sleep(0.01)
 
 	###############################################
 	def Run(self):

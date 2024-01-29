@@ -113,6 +113,8 @@ def Read(h):
 		d = h.read(irmp.REPORT_SIZE)
 		if d:
 			Decode(h, d)
+		else:
+			time.sleep(0.01)
 
 ###############################################
 def Run():
