@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# A experimental receiver for the IRMP
+# An experimental receiver for the IRMP
 # Copyright (C) 2024 Dieter Fauth
 #
 # This program is free software; you can redistribute it and/or modify
@@ -11,10 +11,6 @@
 
 # pip uninstall hid
 # pip install hidapi
-import hid
-from array import *
-import Irmp as irmp
-
 import hid
 from dataclasses import dataclass
 from array import *
@@ -94,13 +90,8 @@ def Decode(h, received):
 		Command = received[4]+(received[5]<<8)
 		Flag = received[6]
 
-		rc_core = Command + (Addr<<16)
-		# FIXME Check other protocols
-		if (Protcol==0x15):
-			rc_core += 0x80000000
-
-		#lirc = 0
-		print(hex(Protcol), hex(Addr), hex(Command), hex(Flag), "rc_core: ", hex(rc_core)) # , "lirc: ", hex(lirc)
+		irmp_fulldata = f"{Protcol:02x}{Addr:04x}{Command:04x}00"
+		print(hex(Protcol), hex(Addr), hex(Command), hex(Flag), "- irmp_fulldata: ", irmp_fulldata)
 
 		# RC-6 KEY_OK
 		if (Protcol==0x15 and Addr==0xf and Command==0x0422 and Flag==0):
