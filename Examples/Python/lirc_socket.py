@@ -3,7 +3,7 @@
 #	WIP
 #	A lirc socket
 
-# An experimental irmplircd daemon
+# An experimental lirc socket
 # For now just a play ground
 # Copyright (C) 2024 Dieter Fauth
 #
@@ -12,7 +12,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import time
 import socket
 import threading
 import os

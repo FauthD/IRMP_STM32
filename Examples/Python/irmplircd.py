@@ -16,10 +16,6 @@
 # pip install hidapi
 import hid
 import time
-import socket
-import threading
-import os
-import queue
 import Irmp as irmp
 import lirc_socket
 
