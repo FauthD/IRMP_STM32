@@ -16,6 +16,8 @@ import time
 import lirc_socket
 import argparse
 import os
+import selectors
+
 import Irmp as irmp
 
 DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
@@ -71,15 +73,21 @@ class irmpd(irmp.IrmpHidRaw):
 		print(message)
 
 	###############################################
-	def Read(self):
+	def ReadIr(self):
 		print("Read the data in endless loop")
+		selector = selectors.DefaultSelector()
+		selector.register(self._hidraw_fd, selectors.EVENT_READ)
 		
-		while True:
-			d = self.read()
-			if d:
-				self.Decode(d)	 # finally calls IrReceiveHandler
-			else:
-				time.sleep(0.05)
+		try:
+			while True:
+				events = selector.select()
+				for key, _ in events:
+					if key.fileobj == self._hidraw_fd:
+						d = self.read()
+						if d:
+							self.Decode(d)	 # finally calls IrReceiveHandler
+		finally:
+			selector.unregister(self._hidraw_fd)
 
 	###############################################
 	def Run(self):
@@ -93,7 +101,7 @@ class irmpd(irmp.IrmpHidRaw):
 			self.socket.StartLircSocket(self.socket_path)
 
 			self.open()
-			self.Read()
+			self.ReadIr()
 			self.close()
 
 		# FIXME: check ex types, socket could also be io?
