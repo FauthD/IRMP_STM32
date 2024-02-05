@@ -13,6 +13,7 @@
 import os
 import time
 import errno
+import selectors
 from dataclasses import dataclass
 
 VID=0x1209
@@ -48,10 +49,12 @@ class IrmpHidRaw():
 		self._buffer_size=REPORT_SIZE
 		self.keymap = {}
 
+	###############################################
 	def open(self):
 		self._hidraw_fd = os.open(self._device_path, os.O_RDWR | os.O_NONBLOCK)
 		return self._hidraw_fd
 
+	###############################################
 	def read(self):
 		try:
 			return os.read(self._hidraw_fd, self._buffer_size)
@@ -61,12 +64,14 @@ class IrmpHidRaw():
 			else:
 				raise(ex)
 
+	###############################################
 	def write(self, data):
 		try:
 			os.write(self._hidraw_fd, data)
 		except IOError as ex:
 			print(f"Error writing to HIDRAW device: {ex}")
 
+	###############################################
 	def close(self):
 		try:
 			if(self._hidraw_fd):
@@ -117,9 +122,28 @@ class IrmpHidRaw():
 		elif (received[0] != REPORT_ID_CONFIG_IN):
 			print (received)
 
+	###############################################
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
 		pass
 
+	###############################################
+	def ReadIr(self):
+		print("Read the data in endless loop")
+		selector = selectors.DefaultSelector()
+		selector.register(self._hidraw_fd, selectors.EVENT_READ)
+		
+		try:
+			while True:
+				events = selector.select()
+				for key, _ in events:
+					if key.fileobj == self._hidraw_fd:
+						d = self.read()
+						if d:
+							self.Decode(d)	 # finally calls IrReceiveHandler
+		finally:
+			selector.unregister(self._hidraw_fd)
+
+	###############################################
 	def SendNeopixelReport(self):
 		report = bytearray(REPORT_SIZE)
 		report[0] = REPORT_ID_CONFIG_OUT
@@ -136,16 +160,20 @@ class IrmpHidRaw():
 
 		self.write(report)
 
+	###############################################
 	def setPixelColor(self, index: int, r: int, g: int, b: int):
 		Pixels[index] = Pixel(0,r,g,b)
 
+	###############################################
 	def setDarkPixelColor(self, index: int, r: int, g: int, b: int):
 		self.setPixelColor(index, int(r/8),int(g/8),int(b/8))
 
+	###############################################
 	def InitPixels(self):
 			for n in range(NUM_PIXEL):
 				self.setPixelColor(n, 0,0,0)
 
+	###############################################
 	def DemoSweep(self, r, g, b, delay=0.050):
 		for n in range(NUM_PIXEL):
 			self.setPixelColor(n, r,g,b)

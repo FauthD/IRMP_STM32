@@ -16,7 +16,6 @@ import time
 import lirc_socket
 import argparse
 import os
-import selectors
 
 import Irmp as irmp
 
@@ -46,23 +45,6 @@ class irmpd(irmp.IrmpHidRaw):
 		message = f"{irmp_fulldata} {Flag} {name} {remote}"
 		self.socket.SendToSocket(message)
 		print(message)
-
-	###############################################
-	def ReadIr(self):
-		print("Read the data in endless loop")
-		selector = selectors.DefaultSelector()
-		selector.register(self._hidraw_fd, selectors.EVENT_READ)
-		
-		try:
-			while True:
-				events = selector.select()
-				for key, _ in events:
-					if key.fileobj == self._hidraw_fd:
-						d = self.read()
-						if d:
-							self.Decode(d)	 # finally calls IrReceiveHandler
-		finally:
-			selector.unregister(self._hidraw_fd)
 
 	###############################################
 	def Run(self):
