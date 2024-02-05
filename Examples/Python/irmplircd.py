@@ -15,6 +15,7 @@
 import time
 import lirc_socket
 import argparse
+import os
 import Irmp as irmp
 
 DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
@@ -23,14 +24,17 @@ DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 DEFAULT_SOCKET_PATH = "/home/fauthd/lircd"
 
 class irmpd(irmp.IrmpHidRaw):
-	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, tx:str=DEFAULT_MAPFILE, txdir:str=DEFAULT_MAPDIR):
+	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR):
 		super().__init__(device_path)
 		self.keymap = {}
-		self.socket_path = DEFAULT_SOCKET_PATH
-		self.message = ''
+		self.mapfile=map
+		self.mapddir=mapdir
+		self.socket_path = socket
 		self.socket = lirc_socket.LircSocket()
+		self.message = ''
 
-	def ReadMap(self, mapfile:str):
+	###############################################
+	def ReadMap(self, mapfile:str, remote:str):
 		with open(mapfile) as f:
 			lines = f.readlines()
 			for line in lines:
@@ -40,17 +44,29 @@ class irmpd(irmp.IrmpHidRaw):
 						continue
 					if (parts[1].startswith('#')):
 						continue
-					self.keymap[parts[0]] = parts[1]
+					name = f"{remote} {parts[1]}"
+					self.keymap[parts[0]] = name
+					self.keymap[name] = parts[0] # reverse translation for irsend
 		#print (self.keymap)
 
+	###############################################
+	def ReadMapDir(self, mapdir:str):
+		if (os.path.exists(mapdir)):
+			for file in os.listdir(mapdir):
+				remote = file.split('.')[0]
+				self.ReadMap(os.path.join(mapdir, file), remote)
+		#print (self.keymap)
+
+	###############################################
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
 		irmp_fulldata = f"{Protcol:02x}{Addr:04x}{Command:04x}00"
 		try:
-			name = self.keymap[irmp_fulldata]
+			remote,name = self.keymap[irmp_fulldata].split()
 		except:
+			remote = "IRMP"
 			name = irmp_fulldata
 
-		message = f"{irmp_fulldata} {Flag} {name} IRMP"
+		message = f"{irmp_fulldata} {Flag} {name} {remote}"
 		self.socket.SendToSocket(message)
 		print(message)
 
@@ -68,7 +84,8 @@ class irmpd(irmp.IrmpHidRaw):
 	###############################################
 	def Run(self):
 		try:
-			self.ReadMap(DEFAULT_MAPFILE)
+			self.ReadMap(self.mapfile, "IRMP")
+			self.ReadMapDir(self.mapddir)
 		except IOError as ex:
 			print(ex)
 		try:
@@ -106,7 +123,7 @@ def main():
 	# global args
 	args = parser.parse_args()
 
-	ir = irmpd(device_path=args.device, socket=args.socket, tx=args.translation, txdir=args.translationddir)
+	ir = irmpd(device_path=args.device, socket=args.socket, map=args.translation, mapdir=args.translationdir)
 	ir.Run()
 	return 0
 
