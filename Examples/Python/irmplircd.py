@@ -13,15 +13,17 @@
 # (at your option) any later version.
 
 import time
-import Irmp as irmp
 import lirc_socket
+import argparse
+import Irmp as irmp
 
-MAPFILE='/etc/irmplircd/irmplircd.map'
+DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
+DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 # DEFAULT_SOCKET_PATH = "/var/run/lirc/lircd"
 DEFAULT_SOCKET_PATH = "/home/fauthd/lircd"
 
 class irmpd(irmp.IrmpHidRaw):
-	def __init__(self, device_path=irmp.DefaultIrmpDevPath):
+	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, tx:str=DEFAULT_MAPFILE, txdir:str=DEFAULT_MAPDIR):
 		super().__init__(device_path)
 		self.keymap = {}
 		self.socket_path = DEFAULT_SOCKET_PATH
@@ -66,7 +68,7 @@ class irmpd(irmp.IrmpHidRaw):
 	###############################################
 	def Run(self):
 		try:
-			ir.ReadMap(MAPFILE)
+			self.ReadMap(DEFAULT_MAPFILE)
 		except IOError as ex:
 			print(ex)
 		try:
@@ -93,5 +95,21 @@ class irmpd(irmp.IrmpHidRaw):
 		print("Done")
 
 ######################################################
-ir = irmpd()
-ir.Run()
+
+def main():
+	parser = argparse.ArgumentParser(prog='irmplircd', description='An experimental daemon')
+	parser.add_argument('-d', '--socket', action='store_true', help=f'UNIX socket. The default is {DEFAULT_SOCKET_PATH}', default=DEFAULT_SOCKET_PATH)
+	parser.add_argument('-t', '--translation', action='store_true', help=f'Path to translation table. The default is {DEFAULT_MAPFILE}.', default=DEFAULT_MAPFILE)
+	parser.add_argument('-T', '--translationdir', action='store_true', help=f'Path to translation table directory. The default is {DEFAULT_MAPDIR}.', default=DEFAULT_MAPDIR)
+	parser.add_argument('-D', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
+
+	# global args
+	args = parser.parse_args()
+
+	ir = irmpd(device_path=args.device, socket=args.socket, tx=args.translation, txdir=args.translationddir)
+	ir.Run()
+	return 0
+
+if __name__ == "__main__":
+	exit ( main() )
+
