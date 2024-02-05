@@ -9,9 +9,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-# pip uninstall hid
-# pip install hidapi
-import hid
 from dataclasses import dataclass
 from array import *
 import time
@@ -83,8 +80,8 @@ def Run():
 	print("You should see 10 sweeps on the Neopixels.")
 
 	try:
-		h = hid.device()
-		h.open(irmp.VID, irmp.PID)
+		h = irmp.IrmpHidRaw()
+		h.open()
 		for n in range(10):
 			DemoSweep(h, 150,5,5)
 
