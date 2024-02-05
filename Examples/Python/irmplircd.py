@@ -28,36 +28,11 @@ DEFAULT_SOCKET_PATH = "/home/fauthd/lircd"
 class irmpd(irmp.IrmpHidRaw):
 	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR):
 		super().__init__(device_path)
-		self.keymap = {}
 		self.mapfile=map
 		self.mapddir=mapdir
 		self.socket_path = socket
 		self.socket = lirc_socket.LircSocket()
 		self.message = ''
-
-	###############################################
-	def ReadMap(self, mapfile:str, remote:str):
-		with open(mapfile) as f:
-			lines = f.readlines()
-			for line in lines:
-				parts =line.split()
-				if (parts is not None and len(parts) >= 2):
-					if (parts[0].startswith('#')):
-						continue
-					if (parts[1].startswith('#')):
-						continue
-					name = f"{remote} {parts[1]}"
-					self.keymap[parts[0]] = name
-					self.keymap[name] = parts[0] # reverse translation for irsend
-		#print (self.keymap)
-
-	###############################################
-	def ReadMapDir(self, mapdir:str):
-		if (os.path.exists(mapdir)):
-			for file in os.listdir(mapdir):
-				remote = file.split('.')[0]
-				self.ReadMap(os.path.join(mapdir, file), remote)
-		#print (self.keymap)
 
 	###############################################
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):

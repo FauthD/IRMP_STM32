@@ -46,6 +46,7 @@ class IrmpHidRaw():
 		self._device_path = device_path
 		self._hidraw_fd = None
 		self._buffer_size=REPORT_SIZE
+		self.keymap = {}
 
 	def open(self):
 		self._hidraw_fd = os.open(self._device_path, os.O_RDWR | os.O_NONBLOCK)
@@ -73,6 +74,31 @@ class IrmpHidRaw():
 			self._hidraw_fd = None
 		except IOError as ex:
 			print(f"Error closing HIDRAW device: {ex}")
+
+	###############################################
+	def ReadMap(self, mapfile:str, remote:str):
+		if (os.path.exists(mapfile)):
+			with open(mapfile) as f:
+				lines = f.readlines()
+				for line in lines:
+					parts =line.split()
+					if (parts is not None and len(parts) >= 2):
+						if (parts[0].startswith('#')):
+							continue
+						if (parts[1].startswith('#')):
+							continue
+						name = f"{remote} {parts[1]}"
+						self.keymap[parts[0]] = name
+						self.keymap[name] = parts[0] # reverse translation for irsend
+		#print (self.keymap)
+
+	###############################################
+	def ReadMapDir(self, mapdir:str):
+		if (os.path.exists(mapdir)):
+			for file in os.listdir(mapdir):
+				remote = file.split('.')[0]
+				self.ReadMap(os.path.join(mapdir, file), remote)
+		#print (self.keymap)
 
 	###############################################
 	# Raw Data (dec):

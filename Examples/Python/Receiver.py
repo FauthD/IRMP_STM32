@@ -13,34 +13,25 @@
 import time
 import Irmp as irmp
 
-MAPFILE='/etc/irmplircd/irmplircd.map'
+
+DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
+DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 
 class Irmp(irmp.IrmpHidRaw):
 	def __init__(self, device_path=irmp.DefaultIrmpDevPath):
 		super().__init__(device_path)
-		self.keymap = {}
-
-	def ReadMap(self, mapfile:str):
-		with open(mapfile) as f:
-			lines = f.readlines()
-			for line in lines:
-				parts =line.split()
-				if (parts is not None and len(parts) >= 2):
-					if (parts[0].startswith('#')):
-						continue
-					if (parts[1].startswith('#')):
-						continue
-					self.keymap[parts[0]] = parts[1]
-		#print (self.keymap)
 
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
 		irmp_fulldata = f"{Protcol:02x}{Addr:04x}{Command:04x}00"
 		try:
-			name = self.keymap[irmp_fulldata]
+			remote,name = self.keymap[irmp_fulldata].split()
 		except:
-			name = None
-		print(irmp_fulldata, ' - ', name)
-	
+			remote = "IRMP"
+			name = irmp_fulldata
+
+		message = f"{irmp_fulldata} {Flag} {name} {remote}"
+		print(message)
+
 	###############################################
 	def Read(self):
 		print("Read the data in endless loop")
@@ -54,6 +45,12 @@ class Irmp(irmp.IrmpHidRaw):
 
 	###############################################
 	def Run(self):
+		try:
+			self.ReadMap(DEFAULT_MAPFILE, "IRMP")
+			self.ReadMapDir(DEFAULT_MAPDIR)
+		except IOError as ex:
+			print(ex)
+
 		try:
 			self.open()
 			self.Read()
@@ -72,9 +69,4 @@ class Irmp(irmp.IrmpHidRaw):
 
 ######################################################
 ir = Irmp()
-try:
-	ir.ReadMap(MAPFILE)
-except IOError as ex:
-	print(ex)
-
 ir.Run()
