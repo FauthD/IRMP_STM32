@@ -27,8 +27,11 @@ REPORT_SIZE = 64
 
 STAT_CMD = 0
 ACC_SET = 1
+CMD_EMIT = 0
+CMD_STATUSLED = 10
 CMD_NEOPIXEL = 0x41
 NEOPIXEL_PAYLOAD_OFFSET = 8
+IRSEND_PAYLOAD_OFFSET = 4
 
 DefaultIrmpDevPath='/dev/irmp_stm32'
 
@@ -142,6 +145,31 @@ class IrmpHidRaw():
 							self.Decode(d)	 # finally calls IrReceiveHandler
 		finally:
 			selector.unregister(self._hidraw_fd)
+
+	###############################################
+	def SendIrReport(self, data):
+		report = bytearray(REPORT_SIZE)
+		report[0] = REPORT_ID_CONFIG_OUT
+		report[1] = STAT_CMD
+		report[2] = ACC_SET
+		report[3] = CMD_EMIT
+		i = IRSEND_PAYLOAD_OFFSET
+		for d in data:
+			report[i] = int(d,16)
+			i += 1
+
+		self.write(report)
+
+	###############################################
+	def SendLedReport(self, led):
+		report = bytearray(REPORT_SIZE)
+		report[0] = REPORT_ID_CONFIG_OUT
+		report[1] = STAT_CMD
+		report[2] = ACC_SET
+		report[3] = CMD_STATUSLED
+		report[4] = led
+
+		self.write(report)
 
 	###############################################
 	def SendNeopixelReport(self):
