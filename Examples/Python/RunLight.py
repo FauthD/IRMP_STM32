@@ -15,81 +15,28 @@ import time
 import Irmp as irmp
 
 ###############################################
-@dataclass
-class Pixel:
-	w: int = 0
-	r: int = 0
-	g: int = 0
-	b: int = 0
+class Irmp(irmp.IrmpHidRaw):
+	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath):
+		super().__init__(device_path)
 
-Pixels = [Pixel() for i in range(irmp.NUM_PIXEL+1)]
+	##########################################
+	def Run(self):
+		print("You should see 10 sweeps on the Neopixels.")
 
-###############################################
-def setPixelColor(index: int, r: int, g: int, b: int):
-	Pixels[index] = Pixel(0,r,g,b)
+		try:
+			self.open()
+			self.SendLedReport(3)	# turn on both status leds
+			for n in range(10):
+				self.DemoSweep(150,5,5)
+			self.SendLedReport(0)
 
-def setDarkPixelColor(index: int, r: int, g: int, b: int):
-	setPixelColor(index, int(r/8),int(g/8),int(b/8))
+		except IOError as ex:
+			print(ex)
+			print("You probably don't have the IRMP device.")
 
-def InitPixels():
-		for n in range(irmp.NUM_PIXEL):
-			setPixelColor(n, 0,0,0)
+		finally:
+			self.close()
+			print("Done")
 
-def SendReport(h):
-	report = bytearray(irmp.REPORT_SIZE)
-	report[0] = irmp.REPORT_ID_CONFIG_OUT
-	report[1] = irmp.STAT_CMD
-	report[2] = irmp.ACC_SET
-	report[3] = irmp.CMD_NEOPIXEL
-	report[4] = irmp.NUM_PIXEL
-	for i in range(irmp.NUM_PIXEL):
-		offset = irmp.NEOPIXEL_PAYLOAD_OFFSET+i*4
-		report[offset + 0] = Pixels[i].w
-		report[offset + 1] = Pixels[i].b
-		report[offset + 2] = Pixels[i].r
-		report[offset + 3] = Pixels[i].g
-
-	h.write(report)
-
-def DemoSweep(h, r, g, b):
-	delay=0.050
-
-	for n in range(irmp.NUM_PIXEL):
-		setPixelColor(n, r,g,b)
-		setDarkPixelColor(n+1, r,g,b)
-		setDarkPixelColor(n-1, r,g,b)
-		SendReport(h)
-		time.sleep(delay)
-		setPixelColor(n, 0,0,0)
-		setPixelColor(n-1, 0,0,0)
-
-	for n in reversed(range(irmp.NUM_PIXEL)):
-		setPixelColor(n, r,g,b)
-		setDarkPixelColor(n-1, r,g,b)
-		setDarkPixelColor(n+1, r,g,b)
-		SendReport(h)
-		time.sleep(delay)
-		setPixelColor(n, 0,0,0)
-		setPixelColor(n+1, 0,0,0)
-
-	setPixelColor(0, 0,0,0)
-	SendReport(h)
-
-###########
-def Run():
-	print("You should see 10 sweeps on the Neopixels.")
-
-	try:
-		h = irmp.IrmpHidRaw()
-		h.open()
-		for n in range(10):
-			DemoSweep(h, 150,5,5)
-
-	except IOError as ex:
-		print(ex)
-		print("You probably don't have the IRMP device.")
-
-	h.close()
-	print("Done")
-
-Run()
+h = Irmp()
+h.Run()
