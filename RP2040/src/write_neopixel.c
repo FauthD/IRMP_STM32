@@ -9,7 +9,7 @@
  *  (at your option) any later version.
  */
 
-#define HW_TRACE 1
+// #define HW_TRACE 1
 
 #include <stdio.h>
 #include <stdlib.h>

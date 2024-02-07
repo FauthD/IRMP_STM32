@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Joerg Riechardt
+ * Copyright (C) 2014-2024 Joerg Riechardt
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,11 +31,10 @@
 #define LED_GPIO		8  /* GPIO 8  (Pin 11) */
 #define STATUSLED_GPIO	2  /* GPIO 2  (Pin 4)  */
 
-#ifdef PICO_DEFAULT_WS2812_PIN
-#define WS2812_PIN PICO_DEFAULT_WS2812_PIN
-#else
-// default to pin 2 if the board doesn't have a default WS2812 pin defined
-#define WS2812_PIN 2
+#define STATUSLED2_GPIO	5  /* GPIO 5  (Pin 8)  */
+#ifndef WS2812_PIN
+// default to pin 7 (Pin 10) if the board doesn't have a default WS2812 pin defined
+#define WS2812_PIN 7
 #endif
 
 #endif /* __CONFIG_H */

@@ -247,13 +247,15 @@ void LED_Switch_init(void)
 	gpio_init(WAKEUP_GPIO);
 	gpio_init(EXTLED_GPIO);
 	gpio_init(STATUSLED_GPIO);
+	gpio_init(STATUSLED2_GPIO);
 	gpio_set_drive_strength(EXTLED_GPIO, GPIO_DRIVE_STRENGTH_12MA);
 	gpio_set_drive_strength(STATUSLED_GPIO, GPIO_DRIVE_STRENGTH_12MA);
+	gpio_set_drive_strength(STATUSLED2_GPIO, GPIO_DRIVE_STRENGTH_12MA);
 	//gpio_set_drive_strength(WAKEUP_GPIO, GPIO_DRIVE_STRENGTH_12MA); // TODO: once enough?!
 	gpio_set_dir(WAKEUP_GPIO, GPIO_IN); // no open drain on RP2040
 	gpio_set_dir(EXTLED_GPIO, GPIO_OUT);
 	gpio_set_dir(STATUSLED_GPIO, GPIO_OUT);
-}
+	gpio_set_dir(STATUSLED2_GPIO, GPIO_OUT);}
 
 void toggle_led(void)
 {
@@ -287,7 +289,8 @@ void yellow_short_on(void)
 }
 
 void statusled_write(uint8_t led_state) {
-	gpio_put(STATUSLED_GPIO, led_state);
+	gpio_put(STATUSLED_GPIO, led_state&1);
+	gpio_put(STATUSLED2_GPIO, led_state&2);
 }
 
 void eeprom_store(int addr, uint8_t *buf)
