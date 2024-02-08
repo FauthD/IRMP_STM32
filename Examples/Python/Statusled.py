@@ -56,7 +56,7 @@ class Irmp(irmp.IrmpHidRaw):
 
 def main():
 	parser = argparse.ArgumentParser(description='An experimental status led tool for IRMP')
-	parser.add_argument('-d', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
+	parser.add_argument('-D', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
 	parser.add_argument('-t', '--time', type=int, help=f'Time between changes in ms', default=500)
 	parser.add_argument('-v', "--version", action="version", version="%(prog)s 0.0.0")
 	parser.add_argument('led', type=int, nargs="*", help=f'Bitmap value for status leds')
