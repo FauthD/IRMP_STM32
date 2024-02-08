@@ -96,6 +96,10 @@ class IrmpHidRaw():
 						if (parts[1].startswith('#')):
 							continue
 						name = f"{remote} {parts[1]}"
+						if parts[0] in self.keymap:
+							print(f"Multiple definitions of: {parts[0]} - {name}")
+						if name in self.keymap:
+							print(f"Multiple definitions of: {name}")
 						self.keymap[parts[0]] = name
 						self.keymap[name] = parts[0] # reverse translation for irsend
 		#print (self.keymap)
