@@ -31,6 +31,29 @@ Still a simple receiver, but uses the irmplircd.map to translate keystrokes.
 ## [ReceiveAndSend.py](ReceiveAndSend.py)
 Still a simple receiver, but at certein keys it send sweeps to the Neopixels.
 
+## [IrmpSend.py](IrmpSend.py)
+Sends IR codes via IRMP. This is not a full replacement of irsend, just a demonstrator.
+
+Examples:
+```
+SEND_ONCE IRMP KEY_OK
+```
+
+Assumed there is a rc6.map file in the config directory, send the two codes with rc6.
+```
+SEND_ONCE rc6 KEY_OK KEY_ESC
+```
+
+## [Statusled.py](Statusled.py)
+A simple status led changer for the IRMP.
+
+Example: Change every 1 sec to red, off, yellow, off, green, off, green, off.
+If there is no two color led connected (original project), you only see the green led blinking.
+
+```
+-t 1000 2 0 3 0 1 0 1 0
+```
+
 ## [irmplircd.py](irmplircd.py)
 An experimental daemon inspired by the original [irmplircd](https://github.com/realglotzi/irmplircd).
 
