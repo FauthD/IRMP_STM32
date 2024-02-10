@@ -24,7 +24,7 @@ class Irmp(irmp.IrmpHidRaw):
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
 		irmp_fulldata = f"{Protcol:02x}{Addr:04x}{Command:04x}00"
 		try:
-			remote,name = self.keymap[irmp_fulldata].split()
+			remote,name = self.GetKey(irmp_fulldata).split()
 		except:
 			remote = "IRMP"
 			name = irmp_fulldata

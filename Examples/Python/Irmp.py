@@ -34,7 +34,10 @@ NEOPIXEL_PAYLOAD_OFFSET = 8
 IRSEND_PAYLOAD_OFFSET = 4
 
 DefaultIrmpDevPath='/dev/irmp_stm32'
+DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
+DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 
+# FIXME: Bring Pixels into class IrmpHidRaw
 ###############################################
 @dataclass
 class Pixel:
@@ -46,11 +49,14 @@ class Pixel:
 Pixels = [Pixel() for i in range(NUM_PIXEL+1)]
 
 class IrmpHidRaw():
-	def __init__(self, device_path=DefaultIrmpDevPath):
+	def __init__(self, device_path=DefaultIrmpDevPath, map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR):
 		self._device_path = device_path
 		self._hidraw_fd = None
 		self._buffer_size=REPORT_SIZE
-		self.keymap = {}
+		self._mapfile=map
+		self._mapddir=mapdir
+		self._keymap = {}
+		self._codemap = {}
 
 	###############################################
 	def open(self):
@@ -96,12 +102,12 @@ class IrmpHidRaw():
 						if (parts[1].startswith('#')):
 							continue
 						name = f"{remote} {parts[1]}"
-						if parts[0] in self.keymap:
+						if parts[0] in self._keymap:
 							print(f"Multiple definitions of: {parts[0]} - {name}")
-						if name in self.keymap:
-							print(f"Multiple definitions of: {name}")
-						self.keymap[parts[0]] = name
-						self.keymap[name] = parts[0] # reverse translation for irsend
+						if name in self._codemap:
+							print(f"Multiple definitions of: {name}, problems ahead")
+						self._keymap[parts[0]] = name
+						self._codemap[name] = parts[0] # reverse translation for irsend
 		#print (self.keymap)
 
 	###############################################
@@ -110,7 +116,25 @@ class IrmpHidRaw():
 			for file in os.listdir(mapdir):
 				remote = file.split('.')[0]
 				self.ReadMap(os.path.join(mapdir, file), remote)
-		#print (self.keymap)
+
+	###############################################
+	def ReadConfig(self):
+		try:
+			self.ReadMap(self._mapfile, "IRMP")
+			self.ReadMapDir(self._mapdir)
+		except IOError as ex:
+			print(ex)
+		# print (self._keymap)
+		# print (self._codemap)
+
+	###############################################
+	def GetKey(self, code):
+		return self._keymap[code]
+
+	###############################################
+	def GetCode(self, remote, key):
+		lockup = f"{remote} {key}"
+		return self._codemap[lockup]
 
 	###############################################
 	# Raw Data (dec):
