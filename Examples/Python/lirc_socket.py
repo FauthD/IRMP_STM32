@@ -17,8 +17,9 @@ import threading
 import os
 import queue
 
+SocketBuffer=1024
 class LircSocket:
-	def __init__(self):
+	def __init__(self, cmd_handler):
 		self.socket_path = ''
 		self.server_socket = None
 		self.message_queue = queue.Queue()
@@ -26,9 +27,14 @@ class LircSocket:
 		self.accept_thread = None
 		self.process_thread = None
 		self.stop = threading.Event()
+		self.cmd_handler = cmd_handler
+		self.ProtocolObjects = []
 
 	def __del__(self):
 		self.StopLircSocket()
+
+	def SendToSocket(self, message):
+		self.message_queue.put(message + "\n")
 
 	def StartLircSocket(self, socket_path:str):
 		self.socket_path = socket_path
@@ -50,8 +56,8 @@ class LircSocket:
 		self.accept_thread = threading.Thread(target=self.AcceptConnection)
 		self.accept_thread.start()
 
-		# Start a thread for the messages
-		self.process_thread = threading.Thread(target=self.ProcessMessages)
+		# Start a thread for the send messages
+		self.process_thread = threading.Thread(target=self.ProcessSendMessages)
 		self.process_thread.start()
 
 	def StopLircSocket(self):
@@ -87,20 +93,39 @@ class LircSocket:
 		while not self.message_queue.empty:
 			self.message_queue.get_nowait()
 
+	def RemoveClients(self):
+		#print("Removing clients")
+		for client_socket in self.client_sockets:
+			client_socket.close()
+		self.client_sockets.clear()
+
+	# a thread per socket connection
+	def CreateProtocolThread(self, client_socket):
+		# Start a thread for the receive messages
+		cmd = LircCmdProtocol(self, self.cmd_handler, client_socket)
+		self.ProtocolObjects.append(cmd)
+		cmd.start()
+
+	def RemoveProtocolObject(self, protocol_object):
+		self.ProtocolObjects.remove(protocol_object)
+
+	def DestroyProtocolThreads(self):
+		# for protocol_object in self.ProtocolObjects:
+		# 	protocol_object.stop()
+		self.ProtocolObjects.clear()
+
 	def AcceptConnection(self):
 		while not self.stop.is_set():
 			client_socket, _ = self.server_socket.accept()
 			print("Accepted connection from client")
 			self.client_sockets.append(client_socket)
+			self.CreateProtocolThread(client_socket)
+
+		self.DestroyProtocolThreads()
+
 		print("AcceptConnection ended")
 
-	def RemoveClients(self):
-		print("Removing clients")
-		for client_socket in self.client_sockets:
-			client_socket.close()
-		self.client_sockets.clear()
-
-	def ProcessMessages(self):
+	def ProcessSendMessages(self):
 		while not self.stop.is_set():
 			message = self.message_queue.get()
 			if message is None:
@@ -110,8 +135,64 @@ class LircSocket:
 					client_socket.sendall(message.encode("utf-8"))
 				except Exception as e:
 					print(f"Error sending data to client: {e}")
-		print("ProcessMessages ended")
+		print("ProcessSendMessages ended")
 
-	def SendToSocket(self, message):
-		self.message_queue.put(message + "\n")
+#################################################################
+class LircCmdProtocol():
+	def __init__(self, parent, cmd_handler, client_socket):
+		self.cmd_handler = cmd_handler
+		self.client_socket = client_socket
+		self.parent = parent
+		self.stop = threading.Event()
+		self.data = b''
+		self.receive_thread = threading.Thread(target=self.ProcessReceivedMessages, args=())
 
+	def __del__(self):
+		self.stop.set()
+
+	def start(self):
+		self.receive_thread.start()
+
+	def stop(self):
+		self.stop.set()
+		self.receive_thread.join()
+
+	# FIXME: implement clean exit
+	def ProcessReceivedMessages(self):
+		while not self.stop.is_set():
+			# Receive from Server
+			try:
+				self.data = self.client_socket.recv(SocketBuffer)
+			except:
+				break
+			if self.data is None or len(self.data) == 0:
+				break
+			self.cmd_handler(self, self.data)
+
+		self.parent.RemoveProtocolObject(self)
+		print("ProcessReceivedMessages ended")
+
+	# Below function get called from within cmd_handler
+	def LircBegin(self):
+		self.client_socket.sendall(f"BEGIN\n".encode("utf-8"))
+		self.client_socket.sendall(self.data)
+
+	def LircEnd(self):
+		self.client_socket.sendall(f"END\n".encode("utf-8"))
+
+	def LircSuccess(self):
+		self.client_socket.sendall(f"SUCCESS\n".encode("utf-8"))
+	
+	def LircSuccessData(self, amount):
+		self.client_socket.sendall(f"SUCCESS\n".encode("utf-8"))
+		self.client_socket.sendall(f"DATA\n".encode("utf-8"))
+		self.client_socket.sendall(f"{amount}\n".encode("utf-8"))
+
+	def LircError(self, error):
+		self.client_socket.sendall(f"ERROR\n".encode("utf-8"))
+		self.client_socket.sendall(f"DATA\n".encode("utf-8"))
+		self.client_socket.sendall(f"1\n".encode("utf-8"))
+		self.client_socket.sendall(f"{error}\n".encode("utf-8"))
+
+	def LircData(self, message):
+		self.client_socket.sendall(f"{message}\n".encode("utf-8"))

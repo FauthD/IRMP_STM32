@@ -54,9 +54,10 @@ class IrmpHidRaw():
 		self._hidraw_fd = None
 		self._buffer_size=REPORT_SIZE
 		self._mapfile=map
-		self._mapddir=mapdir
+		self._mapdir=mapdir
 		self._keymap = {}
 		self._codemap = {}
+		self._remotes = []
 
 	###############################################
 	def open(self):
@@ -91,6 +92,7 @@ class IrmpHidRaw():
 
 	###############################################
 	def ReadMap(self, mapfile:str, remote:str):
+		self._remotes.append(remote)
 		if (os.path.exists(mapfile)):
 			with open(mapfile) as f:
 				lines = f.readlines()
@@ -133,8 +135,24 @@ class IrmpHidRaw():
 
 	###############################################
 	def GetCode(self, remote, key):
-		lockup = f"{remote} {key}"
-		return self._codemap[lockup]
+		self.CheckRemote(remote)
+		lookup = f"{remote} {key}"
+		if not lookup in self._codemap:
+			raise KeyException(f'unknown command: "{lookup}"\n')
+		return self._codemap[lookup]
+
+	###############################################
+	def GetCodeMap(self):
+		return self._codemap
+	
+	###############################################
+	def GetRemotes(self):
+		return self._remotes
+	
+	###############################################
+	def CheckRemote(self, remote):
+		if not remote in self.GetRemotes():
+			raise KeyException(f'unknown remote "{remote}"')
 
 	###############################################
 	# Raw Data (dec):
@@ -251,3 +269,6 @@ class IrmpHidRaw():
 
 		self.setPixelColor(0, 0,0,0)
 		self.SendNeopixelReport()
+
+class KeyException(Exception):
+	pass
