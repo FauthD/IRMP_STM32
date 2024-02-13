@@ -16,7 +16,7 @@ import time
 import os
 
 # DEFAULT_SOCKET_PATH = "/var/run/lirc/lircd"
-DEFAULT_SOCKET_PATH = "/home/fauthd/lircd"
+DEFAULT_SOCKET_PATH = "/tmp/lircd"
 MYTIMEOUT = 30.0
 
 def ReceiveIrDdata(socket_path):

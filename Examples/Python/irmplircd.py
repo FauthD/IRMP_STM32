@@ -23,7 +23,7 @@ import Irmp as irmp
 DEFAULT_MAPFILE='/etc/irmplircd/irmplircd.map'
 DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 # DEFAULT_SOCKET_PATH = "/var/run/lirc/lircd"
-DEFAULT_SOCKET_PATH = "/home/fauthd/lircd"
+DEFAULT_SOCKET_PATH = "/tmp/lircd"
 VersionString = 'V0.0'
 class irmpd(irmp.IrmpHidRaw):
 	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR):
