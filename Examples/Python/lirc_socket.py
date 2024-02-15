@@ -18,8 +18,9 @@ import os
 import queue
 
 SocketBuffer=1024
+LIRC_INET_PORT = 8765
 class LircSocket:
-	def __init__(self, cmd_handler):
+	def __init__(self, socket_type, cmd_handler):
 		self.socket_path = ''
 		self.server_socket = None
 		self.message_queue = queue.Queue()
@@ -28,7 +29,11 @@ class LircSocket:
 		self.process_thread = None
 		self.stop = threading.Event()
 		self.cmd_handler = cmd_handler
-		self.ProtocolObjects = []
+		self.ProtocolObjects = {}
+		self.ObjectIndex = 0
+		self.socket_type = socket_type
+		self.socket_addr = ''
+		self.socket_port = ''
 
 	def __del__(self):
 		self.StopLircSocket()
@@ -38,18 +43,33 @@ class LircSocket:
 
 	def StartLircSocket(self, socket_path:str):
 		self.socket_path = socket_path
-		# remove the socket file if it already exists
-		try:
-			os.unlink(self.socket_path)
-		except OSError:
-			if os.path.exists(self.socket_path):
-				raise
+		self.server_socket = socket.socket(self.socket_type, socket.SOCK_STREAM)
 
-		self.server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-		self.server_socket.bind(self.socket_path)
-		self.server_socket.listen(5)
-
-		print(f"LIRC UNIX Socket listening on path {self.socket_path}")
+		if self.socket_type == socket.AF_UNIX:
+			# remove the socket file if it already exists
+			try:
+				os.unlink(self.socket_path)
+			except OSError:
+				if os.path.exists(self.socket_path):
+					raise
+			self.server_socket.bind(self.socket_path)
+			self.server_socket.listen(5)
+			print(f"LIRC UNIX Socket listening on path {self.socket_path}")
+		else:
+			try:
+				# fixme: double check here
+				# fixme: DNS?
+				self.socket_addr, port = socket_path.split(':')
+				self.socket_port = int(port)
+			except:
+				pass
+			finally:
+				if not self.socket_addr or len(self.socket_addr)==0:
+					self.socket_addr = "0.0.0.0"
+				self.socket_port = LIRC_INET_PORT
+			self.server_socket.bind((self.socket_addr,self.socket_port))
+			self.server_socket.listen(5)
+			print(f"LIRC INET Socket listening on port {self.socket_port}")
 
 		self.stop.clear()
 		# Start a thread to accept clients
@@ -73,7 +93,7 @@ class LircSocket:
 		# Stop the Accept-Thread and wait for it
 		if self.accept_thread is not None:
 			# create a connection request to wake the thread
-			client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+			client_socket = socket.socket(self.socket_type, socket.SOCK_STREAM)
 			client_socket.connect(self.socket_path)
 			client_socket.close()
 			self.accept_thread.join()
@@ -102,12 +122,17 @@ class LircSocket:
 	# a thread per socket connection
 	def CreateProtocolThread(self, client_socket):
 		# Start a thread for the receive messages
-		cmd = LircCmdProtocol(self, self.cmd_handler, client_socket)
-		self.ProtocolObjects.append(cmd)
+		cmd = LircCmdProtocol(self.cmd_handler, client_socket) #, self.ObjectIndex)
+		# self.ProtocolObjects[self.ObjectIndex] = cmd
+		# self.ObjectIndex += 1
+		# self.ProtocolObjects.append(cmd)
 		cmd.start()
 
-	def RemoveProtocolObject(self, protocol_object):
-		self.ProtocolObjects.remove(protocol_object)
+	def RemoveProtocolObject(self, ObjectIndex):
+		try:
+			self.ProtocolObjects[ObjectIndex].remove()
+		finally:
+			pass
 
 	def DestroyProtocolThreads(self):
 		# for protocol_object in self.ProtocolObjects:
@@ -138,11 +163,12 @@ class LircSocket:
 		print("ProcessSendMessages ended")
 
 #################################################################
+# fixme: clean exit
 class LircCmdProtocol():
-	def __init__(self, parent, cmd_handler, client_socket):
+	def __init__(self, cmd_handler, client_socket):
 		self.cmd_handler = cmd_handler
 		self.client_socket = client_socket
-		self.parent = parent
+		#self.parent = parent
 		self.stop = threading.Event()
 		self.data = b''
 		self.receive_thread = threading.Thread(target=self.ProcessReceivedMessages, args=())
@@ -169,7 +195,7 @@ class LircCmdProtocol():
 				break
 			self.cmd_handler(self, self.data)
 
-		self.parent.RemoveProtocolObject(self)
+		#self.parent.RemoveProtocolObject(self.ObjectIndex)
 		print("ProcessReceivedMessages ended")
 
 	# Below function get called from within cmd_handler

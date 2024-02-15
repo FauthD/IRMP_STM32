@@ -13,6 +13,7 @@
 # (at your option) any later version.
 
 import time
+import socket
 import lirc_socket
 import threading
 import argparse
@@ -25,14 +26,20 @@ DEFAULT_MAPDIR='/etc/irmplircd/irmplircd.d'
 # DEFAULT_SOCKET_PATH = "/var/run/lirc/lircd"
 DEFAULT_SOCKET_PATH = "/tmp/lircd"
 VersionString = 'V0.0'
+
 class irmpd(irmp.IrmpHidRaw):
-	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket:str=DEFAULT_SOCKET_PATH, map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR):
+	def __init__(self, device_path:str=irmp.DefaultIrmpDevPath, socket_path:str=DEFAULT_SOCKET_PATH, 
+			  map:str=DEFAULT_MAPFILE, mapdir:str=DEFAULT_MAPDIR, 
+			  allow_simulate:bool=True, listen:str='', connect:str=''):
 		super().__init__(device_path, map, mapdir)
-		self.socket_path = socket
-		self.socket = lirc_socket.LircSocket(cmd_handler=self.CmdDispatcher)
+		self.socket_path = socket_path
+		self.socket = lirc_socket.LircSocket(socket_type=socket.AF_UNIX, cmd_handler=self.CmdDispatcher)
+		self.socket_inet = lirc_socket.LircSocket(socket_type=socket.AF_INET, cmd_handler=self.CmdDispatcher)
 		self.message = ''
 		self.cmd_mutex = threading.Lock()
-		self.allow_simulate = True
+		self.allow_simulate = allow_simulate
+		self.listen = listen
+		self.connect = connect
 
 	###############################################
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
@@ -45,6 +52,7 @@ class irmpd(irmp.IrmpHidRaw):
 
 		message = f"{irmp_fulldata} {Flag} {name} {remote}"
 		self.socket.SendToSocket(message)
+		self.socket_inet.SendToSocket(message)
 		print(message)
 
 	# This function gets called from the socket handler if a client sent a command.
@@ -180,12 +188,14 @@ class irmpd(irmp.IrmpHidRaw):
 		try:
 			# Start the thread for the LIRC UNIX socket
 			self.socket.StartLircSocket(self.socket_path)
+			self.socket_inet.StartLircSocket(self.listen)
 
 			self.open()
 			self.ReadIr()
 			self.close()
 
 		# FIXME: check ex types, socket could also be io?
+			# fixme: for sure I need to improve here
 		except IOError as ex:
 			print(f"Error opening HIDRAW device: {ex}")
 			print("You probably don't have the IRMP device.")
@@ -204,18 +214,47 @@ class irmpd(irmp.IrmpHidRaw):
 
 def main():
 	parser = argparse.ArgumentParser(prog='irmplircd', description='An experimental daemon')
-	parser.add_argument('-d', '--socket', action='store_true', help=f'UNIX socket. The default is {DEFAULT_SOCKET_PATH}', default=DEFAULT_SOCKET_PATH)
+	parser.add_argument('-o', '--output', action='store_true', help=f'Output socket filename. The default is {DEFAULT_SOCKET_PATH}', default=DEFAULT_SOCKET_PATH)
+	parser.add_argument('-l', '--listen', action='store_true', help=f'Listen for network connections address:[port]', default='')
+	parser.add_argument('-c', '--connect', action='store_true', help=f'Connect to remote lircd server host[:port]', default='')
+
 	parser.add_argument('-t', '--translation', action='store_true', help=f'Path to translation table. The default is {DEFAULT_MAPFILE}.', default=DEFAULT_MAPFILE)
 	parser.add_argument('-T', '--translationdir', action='store_true', help=f'Path to translation table directory. The default is {DEFAULT_MAPDIR}.', default=DEFAULT_MAPDIR)
-	parser.add_argument('-D', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
+	parser.add_argument('-d', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
+	parser.add_argument('-a', '--allow_simulate', action='store_true', help=f'Accept SIMULATE command', default=True)
+	parser.add_argument('-v', "--version", action="version", help=f'Display version and exit', version=f"%(prog) {VersionString}")
 
 	# global args
 	args = parser.parse_args()
-
-	ir = irmpd(device_path=args.device, socket=args.socket, map=args.translation, mapdir=args.translationdir)
+#if
+	ir = irmpd(device_path=args.device, socket_path=args.output, 
+			map=args.translation, mapdir=args.translationdir, 
+			allow_simulate=args.allow_simulate, 
+			listen=args.listen, connect=args.connect)
 	ir.Run()
 	return 0
 
 if __name__ == "__main__":
 	exit ( main() )
 
+
+# static const char* const help =
+# 	"Usage: lircd [options] <config-file>\n"
+
+# 	"\t -O --options-file\t\tOptions file\n"
+#         "\t -i --immediate-init\t\tInitialize the device immediately at start\n"
+# 	"\t -n --nodaemon\t\t\tDon't fork to background\n"
+# 	"\t -p --permission=mode\t\tFile permissions for " LIRCD "\n"
+# 	"\t -H --driver=driver\t\tUse given driver (-H help lists drivers)\n"
+# 	"\t -U --plugindir=dir\t\tDir where drivers are loaded from\n"
+
+# 	"\t -P --pidfile=file\t\tDaemon pid file\n"
+
+# 	"\t -L --logfile=file\t\tLog file path (default: use syslog)'\n"
+# 	"\t -D[level] --loglevel[=level]\t'info', 'warning', 'notice', etc., or 3..10.\n"
+
+# 	"\t -Y --dynamic-codes\t\tEnable dynamic code generation\n"
+# 	"\t -A --driver-options=key:value[|key:value...]\n"
+# 	"\t\t\t\t\tSet driver options\n"
+# 	"\t -e --effective-user=uid\t\tRun as uid after init as root\n"
+# 	"\t -R --repeat-max=limit\t\tallow at most this many repeats\n";
