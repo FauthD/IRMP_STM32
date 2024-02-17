@@ -15,6 +15,7 @@
 import time
 import socket
 import lirc_socket
+import lirc_socket_client
 import threading
 import argparse
 import os
@@ -33,13 +34,14 @@ class irmpd(irmp.IrmpHidRaw):
 			  allow_simulate:bool=True, listen:str='', connect:str=''):
 		super().__init__(device_path, map, mapdir)
 		self.socket_path = socket_path
-		self.socket = lirc_socket.LircSocket(socket_type=socket.AF_UNIX, cmd_handler=self.CmdDispatcher)
+		self.socket_unix = lirc_socket.LircSocket(socket_type=socket.AF_UNIX, cmd_handler=self.CmdDispatcher)
 		self.socket_inet = lirc_socket.LircSocket(socket_type=socket.AF_INET, cmd_handler=self.CmdDispatcher)
 		self.message = ''
 		self.cmd_mutex = threading.Lock()
 		self.allow_simulate = allow_simulate
 		self.listen = listen
 		self.connect = connect
+		self.inet_connection = lirc_socket_client.LircSocketClient(socket_type=socket.AF_INET, cmd_handler=self.IrDispatcher)
 
 	###############################################
 	def IrReceiveHandler(self, Protcol, Addr, Command, Flag):
@@ -50,8 +52,10 @@ class irmpd(irmp.IrmpHidRaw):
 			remote = "IRMP"
 			name = irmp_fulldata
 
-		message = f"{irmp_fulldata} {Flag} {name} {remote}"
-		self.socket.SendToSocket(message)
+		self.IrDispatcher(f"{irmp_fulldata} {Flag} {name} {remote}")
+
+	def IrDispatcher(self, message):
+		self.socket_unix.SendToSocket(message)
 		self.socket_inet.SendToSocket(message)
 		print(message)
 
@@ -123,7 +127,7 @@ class irmpd(irmp.IrmpHidRaw):
 			protocol.LircEnd()
 			# must send simulated keypress after the 'END'
 			if len(send):
-				self.socket.SendToSocket(send)
+				self.IrDispatcher(send)
 
 	def SetTransmitters(self, protocol, message):
 		# todo
@@ -176,8 +180,6 @@ class irmpd(irmp.IrmpHidRaw):
 	def SendStop(self, protocol, message):
 		pass
 
-
-
 	###############################################	
 	def Run(self):
 		try:
@@ -185,28 +187,33 @@ class irmpd(irmp.IrmpHidRaw):
 
 		except IOError as ex:
 			print(ex)
-		try:
-			# Start the thread for the LIRC UNIX socket
-			self.socket.StartLircSocket(self.socket_path)
-			self.socket_inet.StartLircSocket(self.listen)
+		
+		# Start the thread for the LIRC UNIX socket
+		self.socket_unix.StartLircSocket(self.socket_path)
+		self.socket_inet.StartLircSocket(self.listen)
+		self.inet_connection.start(self.connect)
 
+		try:
 			self.open()
 			self.ReadIr()
-			self.close()
 
 		# FIXME: check ex types, socket could also be io?
 			# fixme: for sure I need to improve here
+			
 		except IOError as ex:
 			print(f"Error opening HIDRAW device: {ex}")
 			print("You probably don't have the IRMP device.")
-
 		except KeyboardInterrupt:
 			print("Keyboard interrupt")
 
 		finally:
 			self.close()
-			if self.socket is not None:
-				self.socket.StopLircSocket()
+			if self.socket_unix is not None:
+				self.socket_unix.StopLircSocket()
+			if self.socket_inet is not None:
+				self.socket_inet.stop()
+			if self.inet_connection is not None:
+				self.inet_connection.stop()
 	
 		print("Done")
 
@@ -238,6 +245,7 @@ if __name__ == "__main__":
 	exit ( main() )
 
 
+# original lircd options not yet supported:
 # static const char* const help =
 # 	"Usage: lircd [options] <config-file>\n"
 
