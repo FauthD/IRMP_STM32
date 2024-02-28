@@ -221,13 +221,13 @@ class irmpd(irmp.IrmpHidRaw):
 
 def main():
 	parser = argparse.ArgumentParser(prog='irmplircd', description='An experimental daemon')
-	parser.add_argument('-o', '--output', action='store_true', help=f'Output socket filename. The default is {DEFAULT_SOCKET_PATH}', default=DEFAULT_SOCKET_PATH)
-	parser.add_argument('-l', '--listen', action='store_true', help=f'Listen for network connections address:[port]', default='')
-	parser.add_argument('-c', '--connect', action='store_true', help=f'Connect to remote lircd server host[:port]', default='')
+	parser.add_argument('-o', '--output', help=f'Output socket filename. The default is {DEFAULT_SOCKET_PATH}', default=DEFAULT_SOCKET_PATH)
+	parser.add_argument('-l', '--listen', help=f'Listen for network connections address:[port]', default='')
+	parser.add_argument('-c', '--connect', help=f'Connect to remote lircd server host[:port]', default='')
 
-	parser.add_argument('-t', '--translation', action='store_true', help=f'Path to translation table. The default is {DEFAULT_MAPFILE}.', default=DEFAULT_MAPFILE)
-	parser.add_argument('-T', '--translationdir', action='store_true', help=f'Path to translation table directory. The default is {DEFAULT_MAPDIR}.', default=DEFAULT_MAPDIR)
-	parser.add_argument('-d', '--device', action='store_true', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
+	parser.add_argument('-t', '--translation', help=f'Path to translation table. The default is {DEFAULT_MAPFILE}.', default=DEFAULT_MAPFILE)
+	parser.add_argument('-T', '--translationdir', help=f'Path to translation table directory. The default is {DEFAULT_MAPDIR}.', default=DEFAULT_MAPDIR)
+	parser.add_argument('-d', '--device', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
 	parser.add_argument('-a', '--allow_simulate', action='store_true', help=f'Accept SIMULATE command', default=True)
 	parser.add_argument('-v', "--version", action="version", help=f'Display version and exit', version=f"%(prog) {VersionString}")
 
