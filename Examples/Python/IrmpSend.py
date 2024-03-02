@@ -94,9 +94,11 @@ def main():
 		ir = Irmp(device_path=args.device, map=args.translation, mapdir=args.translationdir)
 		ir.ReadConfig()
 
-		if args.command.upper() == 'SEND_ONCE':
+		if args.command and args.command.upper() == 'SEND_ONCE':
 			# print(f"SEND_ONCE {args.remote} {args.code}")
 			ir.SendOnce(args.remote, args.code, args.count)
+		else:
+			print('COmmand missing: SEND_ONCE')
 
 	return ret
 
