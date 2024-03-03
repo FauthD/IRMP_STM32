@@ -229,7 +229,7 @@ def main():
 	parser.add_argument('-T', '--translationdir', help=f'Path to translation table directory. The default is {DEFAULT_MAPDIR}.', default=DEFAULT_MAPDIR)
 	parser.add_argument('-d', '--device', help=f'The input device e.g. /dev/hidraw0. The default is {irmp.DefaultIrmpDevPath}', default=irmp.DefaultIrmpDevPath)
 	parser.add_argument('-a', '--allow_simulate', action='store_true', help=f'Accept SIMULATE command', default=True)
-	parser.add_argument('-v', "--version", action="version", help=f'Display version and exit', version=f"%(prog) {VersionString}")
+	parser.add_argument('-v', "--version", action="version", help=f'Display version and exit', version=f"%(prog)s {VersionString}")
 
 	# global args
 	args = parser.parse_args()
